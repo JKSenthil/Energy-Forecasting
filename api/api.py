@@ -5,9 +5,9 @@ import pandas as pd
 
 #lat = "26.8467"
 #long = "80.9462"
-lat = "28.3670"
-long = "79.4304"
-time = "1391230800"
+lat = "28.5355"
+long = "77.3910"
+time = "1391565600"
 #time = 1389939200
 #?exclude=hourly,daily
 
