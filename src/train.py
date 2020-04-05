@@ -21,7 +21,8 @@ def load_formatted_data(filepath='../data/data.p'):
     # normalize unix and demand data
     formatted_data[:, 0] = formatted_data[:, 0] % (1440) # converts to time of day
     formatted_data[:, 0] /= np.max(formatted_data[:, 0])
-    
+    # formatted_data[:,-1] /= np.max(formatted_data[:, -1])
+
     return formatted_data
 
 def train(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
@@ -51,7 +52,7 @@ def train(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
                 batch_X[k % batch_size, :, :] = data[l-n_prev:l,:]
                 batch_Y[k % batch_size, :] = data[l:l+n_out, -1]
             batch_X = np.swapaxes(batch_X, 0, 1) # conform with rnn input requirements
-            batch_X[:,:,-1] /= np.max(data[:, -1]) # normalize demand data
+            # batch_X[:,:,-1] /= np.max(data[:, -1]) # normalize demand data
 
             batch_curr_weather = data[indicies[j*batch_size:(j+1)*batch_size],:-1]
             batch_Y = torch.from_numpy(batch_Y).float()
