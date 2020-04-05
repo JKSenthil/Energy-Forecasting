@@ -35,8 +35,8 @@ class RNN(tf.keras.Model):
 
         # initialize neural network layers
         self.gru = tf.keras.layers.GRU(units, input_shape=(91, 154))
-        self.dense1 = tf.keras.layers.Dense(128, activation=tf.nn.leaky_relu, input_shape=units + 154)
-        self.dense2 = tf.keras.layers.Dense(n_out, activation='linear', input_shape=128)
+        self.dense1 = tf.keras.layers.Dense(128, activation=tf.nn.leaky_relu)
+        self.dense2 = tf.keras.layers.Dense(n_out, activation='linear')
 
     def call(self, inputs, curr_weather):
         """
