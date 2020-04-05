@@ -19,7 +19,7 @@ def load_formatted_data(filepath='./data/data.p'):
         formatted_data[:, (t*9)+1:((t+1)*9)+1] = data[t][:, 1:-1] # inserts weather data to appropriate slot
 
     # normalize unix and demand data
-    formatted_data[:, 0] = formatted_data[:, 0] % 1440 # converts to time of day
+    formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
     formatted_data[:, 0] /= np.max(formatted_data[:, 0])
     
     return formatted_data
