@@ -1,53 +1,26 @@
 import numpy as np
-import tensorflow as tf
+import torch
+import torch.nn as nn
 
-tf.keras.backend.set_floatx('float64')
-
-class MLP(tf.keras.Model):
-    def __init__(self, n_out, lr=1e-4):
-        super(MLP, self).__init__()
-        
-        # initialize optimizer
-        self.opt = tf.keras.optimizers.Adam(learning_rate=lr)
-
-        # initialize neural network layers TODO: change this
-        self.dense1 = tf.keras.layers.Dense(128, activation=tf.nn.leaky_relu)
-        self.dense2 = tf.keras.layers.Dense(n_out, activation='linear')
-
-    def call(self, inputs, curr_weather):
-        """
-        inputs will be of shape (batch_size, input_size, sequence_length)
-        """
-        pass
-    
-    def loss(self, y_true, y_pred):
-        """
-        Mean Squared error loss
-        """
-        return tf.keras.losses.MSE(y_true, y_true)
-
-class RNN(tf.keras.Model):
-    def __init__(self, n_out, lr=1e-4, units=256):
+class RNN(nn.Module):
+    def __init__(self, n_out, lr=1e-4, hidden_layer_size=256):
         super(RNN, self).__init__()
-        
-        # initialize optimizer
-        self.opt = tf.keras.optimizers.Adam(learning_rate=lr)
 
         # initialize neural network layers
-        self.gru = tf.keras.layers.GRU(units, input_shape=(91, 154))
-        self.dense1 = tf.keras.layers.Dense(128, activation=tf.nn.leaky_relu)
-        self.dense2 = tf.keras.layers.Dense(n_out, activation='linear')
+        self.gru = nn.GRU(92, hidden_layer_size)
+        self.dense1 = nn.Linear(hidden_layer_size + 91, 128)
+        self.dense2 = nn.Linear(128, n_out)
 
-    def call(self, inputs, curr_weather):
+    def forward(self, inputs, curr_weather):
         """
-        inputs will be of shape (batch_size, input_size, sequence_length)
+        inputs will be of shape (sequence_length, batch_size, input_size)
         """
-        gru_output = self.gru(inputs)
-        out1 = self.dense1(tf.concat([gru_output, curr_weather], axis=1))
-        return self.dense2(out1)
-    
-    def loss(self, y_true, y_pred):
-        """
-        Mean Squared error loss
-        """
-        return tf.keras.losses.MSE(y_true, y_true)
+        # convert inputs from numpy to pytorch tensor
+        inputs = torch.from_numpy(inputs).float()
+        curr_weather = torch.from_numpy(curr_weather).float()
+
+        gru_output, _ = self.gru(inputs)
+        gru_output = gru_output[-1,:,:]
+        cat = torch.cat([gru_output, curr_weather], axis=1)
+        out = nn.ReLU()(self.dense1(cat))
+        return self.dense2(out)

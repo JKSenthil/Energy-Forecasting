@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
-import tensorflow as tf
+import torch
+import torch.nn as nn
 
 from model import RNN
 
@@ -23,7 +24,7 @@ def load_formatted_data(filepath='./data/data.p'):
     
     return formatted_data
 
-def train(model, data, num_epochs, batch_size, n_prev, n_out):
+def train(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
     """
     model: RNN model to train
     data: formatted data to work with
@@ -41,28 +42,31 @@ def train(model, data, num_epochs, batch_size, n_prev, n_out):
         # shuffles indicies to essentially shuffle training data order
         np.random.shuffle(indicies)
 
-        # initialize batch data array
-        batch_X = np.zeros((batch_size, n_prev, input_size))
-        batch_Y = np.zeros((batch_size, n_out))
-
         for j in range(num_batches):
+            # initialize batch data array
+            batch_X = np.zeros((batch_size, n_prev, input_size))
+            batch_Y = np.zeros((batch_size, n_out))
             for k in range(j*batch_size,(j+1)*batch_size):
                 l = indicies[k]
-                batch_X[l % batch_size, :, :] = data[l-n_prev:l,:]
-                batch_Y[l % batch_size, :] = data[l:l+n_out, -1]
-            batch_X = np.swapaxes(batch_X, 1, 2) # conform with input requirements
+                batch_X[k % batch_size, :, :] = data[l-n_prev:l,:]
+                batch_Y[k % batch_size, :] = data[l:l+n_out, -1]
+            batch_X = np.swapaxes(batch_X, 0, 1) # conform with rnn input requirements
+            batch_X[:,:,-1] /= np.max(data[:, -1]) # normalize demand data
+
             batch_curr_weather = data[indicies[j*batch_size:(j+1)*batch_size],:-1]
+            batch_Y = torch.from_numpy(batch_Y).float()
 
             # compute backprop for model
-            with tf.GradientTape() as tape:
-                out = model.call(batch_X, batch_curr_weather)
-                loss = model.loss(batch_Y, out)
-            gradients = tape.gradient(loss, model.trainable_variables)
-            model.opt.apply_gradients(zip(gradients, model.trainable_variables))
+            optimizer.zero_grad()
+            y_pred = model.forward(batch_X, batch_curr_weather)
+            loss = torch.sum((batch_Y - y_pred) ** 2)/ n_out # measn squared error loss
+            loss.backward()
+            optimizer.step()
+            
+            print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
 
-            print("Batch {} of {} done, loss={}".format(i+1, num_batches, loss))
-
-model = RNN(n_out=154)
+model = RNN(n_out=154).float()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 data = load_formatted_data()
 
-train(model, data, 10, 32, 154, 154)
+train(model, optimizer, data, 10, 32, 154, 154)
