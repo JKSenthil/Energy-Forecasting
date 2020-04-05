@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from model import RNN
 
-def load_formatted_data(filepath='./data/data.p'):
+def load_formatted_data(filepath='../data/data.p'):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
     data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
     formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
@@ -19,7 +19,7 @@ def load_formatted_data(filepath='./data/data.p'):
         formatted_data[:, (t*9)+1:((t+1)*9)+1] = data[t][:, 1:-1] # inserts weather data to appropriate slot
 
     # normalize unix and demand data
-    formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+    formatted_data[:, 0] = formatted_data[:, 0] % (1440) # converts to time of day
     formatted_data[:, 0] /= np.max(formatted_data[:, 0])
     
     return formatted_data
@@ -33,8 +33,8 @@ def train(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
     n_prev: how much previous timesteps model should observe before making prediction
             (should be same as arg to RNN model)
     """
-    indicies = np.arange(n_prev, len(data) - n_out)
-    num_batches = len(data) // batch_size
+    indicies = np.arange(n_prev, len(data)-n_out)
+    num_batches = (len(data) // batch_size) - batch_size
     input_size = len(data[0])
     for i in range(num_epochs):
         print("Starting epoch {}".format(i))
@@ -59,7 +59,7 @@ def train(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
             # compute backprop for model
             optimizer.zero_grad()
             y_pred = model.forward(batch_X, batch_curr_weather)
-            loss = torch.sum((batch_Y - y_pred) ** 2)/ n_out # measn squared error loss
+            loss = ((batch_Y - y_pred) ** 2).mean() # mean squared error loss
             loss.backward()
             optimizer.step()
             
@@ -69,4 +69,4 @@ model = RNN(n_out=154).float()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 data = load_formatted_data()
 
-train(model, optimizer, data, 10, 32, 154, 154)
+train(model, optimizer, data, 10, 128, 154, 154)
