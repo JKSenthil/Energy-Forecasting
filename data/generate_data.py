@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 import pickle
 
-drive.mount("/content/gdrive", force_remount=True)
-
 cols_historical = ['DateHrGmt','CloudCoveragePercent', 'SurfaceTemperatureCelsius', 'SurfaceDewpointTemperatureCelsius',
          'RelativeHumidityPercent', 'SurfaceAirPressureKilopascals', 'ApparentTemperatureCelsius',
          'WindChillTemperatureCelsius', 'WindSpeedKph', 'WindDirectionDegrees']

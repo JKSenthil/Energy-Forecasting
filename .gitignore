@@ -1,5 +1,5 @@
-data/
 *.vscode
 *.json
 *.csv
 *.p
+__pycache__/

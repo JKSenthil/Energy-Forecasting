@@ -31,7 +31,7 @@ x = pd.concat([data, everything[1].drop(columns = ['Unix', 'Demand']), everythin
                everything[4].drop(columns = ['Unix', 'Demand']), everything[5].drop(columns = ['Unix', 'Demand']), 
                everything[6].drop(columns = ['Unix', 'Demand']), everything[7].drop(columns = ['Unix', 'Demand'])], axis = 1)
 print(x.shape)
-x.to_csv('raw.csv', index=False)
+data.to_csv('raw.csv', index=False)
 dataset = read_csv('raw.csv', index_col=0)
 dataset.index.name = 'Unix'
 print(dataset.head(5))
@@ -78,7 +78,7 @@ values = values.astype('float32')
 n_hours = 360
 n_features = 72
 look_ahead = 154
-reframed = series_to_supervised(values, 1, 1)
+reframed = series_to_supervised(values, n_hours, look_ahead)
 
 #Using Multilayer Perceptron
 #10 * 360 * data points
@@ -97,7 +97,7 @@ model.add(Dense(100, activation='relu', input_dim = n_input - 1))
 model.add(Dense(154))
 model.compile(optimizer='adam', loss='mse')
 # fit model
-model.fit(X, Y, epochs=5, verbose=0)
+model.fit(X, Y, epochs=50, verbose=0)
 
 n = 9000
 test = X[n, :]
