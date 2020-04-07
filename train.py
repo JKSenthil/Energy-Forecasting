@@ -3,8 +3,23 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from model.rnn import RNN
+from model.mlp import BasicMLP
+from model.autoencoder import AutoEncoder
+from model.data_loader import load_formatted_data, load_formatted_datav2
+
 # uses gpu if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+def random_train_test_split(data, percentage=0.8):
+    """
+    Generates random train-test split of the data
+    """
+    n = len(data)
+    np.random.shuffle(data) # shuffle data in place
+    
+    train_size = int(n * 0.8)
+    return data[:train_size], data[train_size:]
 
 def train_basicMLP(model, optimizer, data, num_epochs, batch_size):
     """
@@ -90,6 +105,36 @@ def train_rnn(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
             
             print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
 
+def train_autoencoder(model, optimizer, train, test, num_epochs, batch_size):
+    indices = np.arange(0, len(train))
+    num_batches = (len(train) // batch_size) - batch_size
+
+    test = torch.from_numpy(test).float().to(device)
+
+    for i in range(num_epochs):
+        print("Starting epoch {}".format(i+1))
+        
+        # shuffles indices to essentially shuffle training data order
+        np.random.shuffle(indices)
+
+        for j in range(num_batches):
+            # initialize batch data array
+            batch_X = train[indices[j*batch_size:(j+1)*batch_size],:]
+
+            batch_X = torch.from_numpy(batch_X).float().to(device)
+
+            # compute backprop for model
+            optimizer.zero_grad()
+            y_pred = model(batch_X)
+            loss = loss_function(batch_X, y_pred)
+            loss.backward()
+            optimizer.step()
+            
+            print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
+        
+        test_loss = loss_function(test, model(test))
+        print("Epoch {} done, test error is {}".format(i+1, test_loss.item()))
+
 # model = RNN(n_out=154).float()
 # model.to(device)
 # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -101,3 +146,12 @@ def train_rnn(model, optimizer, data, num_epochs, batch_size, n_prev, n_out):
 # optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 # data = load_formatted_datav2()
 # train_basicMLP(model, optimizer, data, 10, 64)
+
+model = AutoEncoder(92, 10)
+model.to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+data = load_formatted_data()
+train, test = random_train_test_split(data)
+loss_function = nn.MSELoss().to(device)
+
+train_autoencoder(model, optimizer, train, test, 10, 256)
