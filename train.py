@@ -8,7 +8,7 @@ from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
 from model.data_loader import load_formatted_data, load_formatted_datav2
 
-# uses gpu if available
+# use gpu if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def random_train_test_split(data, percentage=0.8):
