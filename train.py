@@ -6,7 +6,8 @@ import torch.nn as nn
 from model.rnn import RNN
 from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
-from model.data_loader import load_formatted_data, load_formatted_datav2
+# from model.data_loader import load_formatted_data, load_formatted_datav2
+from model.data_loader import load_formatted_datav3
 
 # uses gpu if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -147,11 +148,16 @@ def train_autoencoder(model, optimizer, train, test, num_epochs, batch_size):
 # data = load_formatted_datav2()
 # train_basicMLP(model, optimizer, data, 10, 64)
 
-model = AutoEncoder(92, 10)
-model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-data = load_formatted_data()
-train, test = random_train_test_split(data)
-loss_function = nn.MSELoss().to(device)
 
-train_autoencoder(model, optimizer, train, test, 10, 256)
+data = load_formatted_datav3()
+
+
+# model = AutoEncoder(92, 10)
+# model.to(device)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# data = load_formatted_data()
+# print(data)
+# train, test = random_train_test_split(data)
+# loss_function = nn.MSELoss().to(device)
+
+# train_autoencoder(model, optimizer, train, test, 10, 256)
