@@ -2,22 +2,20 @@ import torch
 import torch.nn as nn
 
 class RNN(nn.Module):
-    def __init__(self, n_out, n_layers=1, hidden_layer_size=192):
+    def __init__(self, n_in=10, n_out=96, n_layers=1, hidden_layer_size=192):
         super(RNN, self).__init__()
 
         self.n_layers = n_layers
         self.hidden_layer_size = hidden_layer_size
 
         # initialize neural network layers
-        self.gru = nn.GRU(11, hidden_layer_size, num_layers=n_layers)
-        self.dense1 = nn.Linear(hidden_layer_size + 154 * 10, 512)
+        self.gru = nn.GRU(n_in, hidden_layer_size, num_layers=n_layers)
+        self.dense1 = nn.Linear(hidden_layer_size + n_in, 128)
         self.rest = nn.Sequential(
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, n_out)
+            nn.LeakyReLU(),
+            nn.Linear(128, 128),
+            nn.LeakyReLU(),
+            nn.Linear(128, n_out),
         )
 
     def forward(self, inputs, curr_weather):

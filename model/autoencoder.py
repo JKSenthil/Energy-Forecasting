@@ -19,3 +19,6 @@ class AutoEncoder(nn.Module):
 
     def forward(self, inputs):
         return self.decoder(self.encoder(inputs))
+
+    def enc(self, inputs):
+        return self.encoder(inputs)
