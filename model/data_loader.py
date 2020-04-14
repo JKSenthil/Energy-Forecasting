@@ -30,10 +30,18 @@ def load_formatted_datav2(filepath=DATAFILE_PATH):
     formatted_data = data[7] # use only one city
 
     # normalize unix and demand data
-    formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
-    formatted_data[:, 0] /= np.max(formatted_data[:, 0])
+    # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+    # formatted_data[:, 0] /= np.max(formatted_data[:, 0])
     
-    return formatted_data
+    # normalize demand data EXPERIMENT
+    # formatted_data[:, -1] = 1 / formatted_data[:, -1]
+    _min = np.min(formatted_data[:, -1])
+    _max = np.max(formatted_data[:, -1])
+    formatted_data[:, -1] -= _min
+    _max = np.max(formatted_data[:, -1])
+    formatted_data[:, -1] /= _max
+
+    return formatted_data[:, 1:], _max, _min
 
 def load_formatted_datav3(filepath=DATAFILE_PATH):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle

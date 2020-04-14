@@ -7,7 +7,7 @@ from model.rnn import RNN
 from model.c_rnn import cRNN
 from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
-from model.data_loader import load_formatted_datav3
+from model.data_loader import load_formatted_datav2, load_formatted_datav3
 
 from experiments import EXPERIMENTS_DIR
 
@@ -182,7 +182,6 @@ def train_crnn(model, optimizer, loss_function, data, num_epochs, batch_size, n_
     indicies = np.arange(n_prev, len(data)-n_out)
     num_batches = (len(data) // batch_size) - batch_size
     lag_size = len(data[0]) * n_prev
-    curr_size = (len(data[0]) - 1) * n_out
 
     for i in range(num_epochs):
         print("Starting epoch {}".format(i))
@@ -193,13 +192,15 @@ def train_crnn(model, optimizer, loss_function, data, num_epochs, batch_size, n_
         for j in range(num_batches):
             # initialize batch data array
             batch_lag = np.zeros((batch_size, lag_size))
-            batch_curr = np.zeros((batch_size, curr_size))
+            batch_curr = np.zeros((batch_size, n_out, len(data[0]) - 1))
             batch_Y = np.zeros((batch_size, n_out))
             for k in range(j*batch_size,(j+1)*batch_size):
                 l = indicies[k]
                 batch_lag[k % batch_size, :] = data[l-n_prev:l,:].flatten()
-                batch_curr[k % batch_size, :] = data[l+n_out, :-1].flatten()
+                batch_curr[k % batch_size, :, :] = data[l:l+n_out, :-1]
                 batch_Y[k % batch_size, :] = data[l:l+n_out, -1]    
+            
+            batch_curr = np.swapaxes(batch_curr, 0, 1) # conform with rnn input requirements
 
             # convert inputs to torch tensors
             batch_lag = torch.from_numpy(batch_lag).float().to(device)
@@ -209,7 +210,7 @@ def train_crnn(model, optimizer, loss_function, data, num_epochs, batch_size, n_
             # compute backprop for model
             optimizer.zero_grad()
             y_pred = model.forward(batch_lag, batch_curr)
-            loss = loss_function(batch_Y, y_pred)
+            loss = loss_function((batch_Y * _max) + _min, (y_pred * _max) + _min)
             loss.backward()
             optimizer.step()
             
@@ -235,12 +236,12 @@ def train_crnn(model, optimizer, loss_function, data, num_epochs, batch_size, n_
 # =================================================== #
 
 # ================ TRAIN cRNN ======================== #
-data = load_formatted_datav3()
-model = cRNN(len(data[0]) * 96, (len(data[0])-1)*96, 192)
+data, _max, _min = load_formatted_datav2()
+model = cRNN(len(data[0]) * 96, 9, 256)
 model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_function = nn.MSELoss().to(device)
-train_crnn(model, optimizer, loss_function, data, 100, 64, n_prev=96, n_out=96)
+train_crnn(model, optimizer, loss_function, data, 100, 128, n_prev=96, n_out=96)
 # =================================================== #
 
 # ================ TRAIN MLP ======================== #
