@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 from model.rnn import RNN
+from model.c_rnn import cRNN
 from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
 from model.data_loader import load_formatted_datav3
@@ -177,6 +178,42 @@ def train_autoencoder(model, optimizer, train, test, loss_function, batch_size):
     
     print("Training ended, reached epoch {} with a best test loss of {}".format(i+1, prev_loss))
 
+def train_crnn(model, optimizer, loss_function, data, num_epochs, batch_size, n_prev, n_out):
+    indicies = np.arange(n_prev, len(data)-n_out)
+    num_batches = (len(data) // batch_size) - batch_size
+    lag_size = len(data[0]) * n_prev
+    curr_size = (len(data[0]) - 1) * n_out
+
+    for i in range(num_epochs):
+        print("Starting epoch {}".format(i))
+
+        # shuffles indicies to shuffle training data order
+        np.random.shuffle(indicies)
+
+        for j in range(num_batches):
+            # initialize batch data array
+            batch_lag = np.zeros((batch_size, lag_size))
+            batch_curr = np.zeros((batch_size, curr_size))
+            batch_Y = np.zeros((batch_size, n_out))
+            for k in range(j*batch_size,(j+1)*batch_size):
+                l = indicies[k]
+                batch_lag[k % batch_size, :] = data[l-n_prev:l,:].flatten()
+                batch_curr[k % batch_size, :] = data[l+n_out, :-1].flatten()
+                batch_Y[k % batch_size, :] = data[l:l+n_out, -1]    
+
+            # convert inputs to torch tensors
+            batch_lag = torch.from_numpy(batch_lag).float().to(device)
+            batch_curr = torch.from_numpy(batch_curr).float().to(device)
+            batch_Y = torch.from_numpy(batch_Y).float().to(device)
+
+            # compute backprop for model
+            optimizer.zero_grad()
+            y_pred = model.forward(batch_lag, batch_curr)
+            loss = loss_function(batch_Y, y_pred)
+            loss.backward()
+            optimizer.step()
+            
+            print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
 # ================ TRAIN AUTOENCODER ======================== #
 # data = load_formatted_datav3()
 # data = data[:,:-1] # drop demand data
@@ -197,12 +234,20 @@ def train_autoencoder(model, optimizer, train, test, loss_function, batch_size):
 # train_rnn(model, optimizer, loss_function, data, 100, 128, n_prev=96*3)
 # =================================================== #
 
-
-# ================ TRAIN MLP ======================== #
+# ================ TRAIN cRNN ======================== #
 data = load_formatted_datav3()
-model = BasicMLP()
+model = cRNN(len(data[0]) * 96, (len(data[0])-1)*96, 192)
 model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_function = nn.MSELoss().to(device)
-train_basicMLP(model, optimizer, loss_function, data, 10, 64)
+train_crnn(model, optimizer, loss_function, data, 100, 64, n_prev=96, n_out=96)
+# =================================================== #
+
+# ================ TRAIN MLP ======================== #
+# data = load_formatted_datav3()
+# model = BasicMLP()
+# model.to(device)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# loss_function = nn.MSELoss().to(device)
+# train_basicMLP(model, optimizer, loss_function, data, 10, 64)
 # =================================================== #
