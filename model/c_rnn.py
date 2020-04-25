@@ -42,15 +42,15 @@ class cRNNv2(nn.Module):
         h_t = None
 
         # encoder goes through lag data
-        for weather in lag:
+        for demand in lag:
             if type(h_t) == type(None):
-                h_t = self.encoder(weather)
+                h_t = self.encoder(demand)
             else:
-                h_t = self.encoder(weather, h_t)
+                h_t = self.encoder(demand, h_t)
 
         h_tz = None
         for weather in curr:
-            z = torch.cat([weather, h_t], dim=1)
+            z = torch.cat([h_t, weather], dim=1)
             if type(h_tz) == type(None):
                 h_tz = self.decoder(z)
             else:

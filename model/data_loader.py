@@ -89,8 +89,6 @@ def load_formatted_datav3(filepath=DATAFILE_PATH):
         formatted_data[time, day_asc[day]] = 1
         formatted_data[time, timestamp_asc[timestamp]] = 1
         
-
-
      # insert weather data from each city
     for t in range(len(data)):
         formatted_data[:, (t*9)+1 + years + months + days + timestamps :((t+1)*9)+1 + years + months + days + timestamps] = data[t][:, 1:-1] # inserts weather data to appropriate slot
@@ -100,5 +98,10 @@ def load_formatted_datav3(filepath=DATAFILE_PATH):
     # formatted_data[:, 0] = (formatted_data[:, 0]  - np.min(formatted_data[:,0]))/ np.max(formatted_data[:, 0])
     # formatted_data[:,-1] /= np.max(formatted_data[:, -1])
 
-    x = formatted_data[:, 1:]
-    return x
+    _min = np.min(formatted_data[:, -1])
+    _max = np.max(formatted_data[:, -1])
+    formatted_data[:, -1] -= _min
+    _max = np.max(formatted_data[:, -1])
+    formatted_data[:, -1] /= _max
+    
+    return formatted_data[:, 1:], _max, _min # drop unix
