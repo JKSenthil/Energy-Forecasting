@@ -297,27 +297,27 @@ def train_crnnV2(model, ae_model, optimizer, loss_func, data, test_data, num_epo
 # =================================================== #
 
 # ================ TRAIN crnnV2 ======================== #
-# num_days = 10/96
+num_days = 10/96
 
-# data, _max, _min = load_formatted_datav2()
-# data = data[:,[-5,-1]]
-# enc_weather_size = len(data[0]) - 1
-# train_data, test_data = train_test_split(data, percentage=0.90)
-# weather_ae = None #AutoEncoder(len(data[0]) - 1, 10)
-# #weather_ae.load_state_dict(torch.load(EXPERIMENTS_DIR + "/weather_ae.pth"))
-# #weather_ae.to(device)
-# model = cRNNv2(1, enc_weather_size, 64, 32)
-# model.to(device)
-# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-# loss_function = nn.MSELoss().to(device)
-# train_crnnV2(model, weather_ae, optimizer, loss_function, train_data, test_data, 100, 128, 96 * 5, 96)
-# =================================================== #
-
-# ================ TRAIN MLP ======================== #
-data, _max, _min = load_formatted_datav3()
-model = BasicMLP(len(data)*96, 96 * (len(data) - 1), 96 * (len(data) - 1))
+past_wd, future_w, future_d, _max, _min = load_formatted_datav2()
+data = data[:,[-5,-1]]
+enc_weather_size = len(data[0]) - 1
+train_data, test_data = train_test_split(data, percentage=0.90)
+weather_ae = None #AutoEncoder(len(data[0]) - 1, 10)
+#weather_ae.load_state_dict(torch.load(EXPERIMENTS_DIR + "/weather_ae.pth"))
+#weather_ae.to(device)
+model = cRNNv2(1, enc_weather_size, 64, 32)
 model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_function = nn.MSELoss().to(device)
-train_basicMLP(model, optimizer, loss_function, data, 10, 64)
+train_crnnV2(model, weather_ae, optimizer, loss_function, train_data, test_data, 100, 128, 96 * 5, 96)
+# =================================================== #
+
+# ================ TRAIN MLP ======================== #
+# data, _max, _min = load_formatted_datav3()
+# model = BasicMLP(len(data)*96, 96 * (len(data) - 1), 96 * (len(data) - 1))
+# model.to(device)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+# loss_function = nn.MSELoss().to(device)
+# train_basicMLP(model, optimizer, loss_function, data, 10, 64)
 # =================================================== #
