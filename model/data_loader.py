@@ -2,48 +2,48 @@ import pickle
 import numpy as np
 import pandas as pd
 import datetime
-from . import DATAFILE_PATH
+# from . import DATAFILE_PATH
 
-def load_formatted_data(filepath=DATAFILE_PATH):
-    data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
-    formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
+# def load_formatted_data(filepath=DATAFILE_PATH):
+#     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+#     data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
+#     formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
 
-    # insert unix time and demand
-    formatted_data[:, 0] = data[0][:,0] # unix
-    formatted_data[:, -1] = data[0][:,-1] # demand
+#     # insert unix time and demand
+#     formatted_data[:, 0] = data[0][:,0] # unix
+#     formatted_data[:, -1] = data[0][:,-1] # demand
 
-    # insert weather data from each city
-    for t in range(len(data)):
-        formatted_data[:, (t*9)+1:((t+1)*9)+1] = data[t][:, 1:-1] # inserts weather data to appropriate slot
+#     # insert weather data from each city
+#     for t in range(len(data)):
+#         formatted_data[:, (t*9)+1:((t+1)*9)+1] = data[t][:, 1:-1] # inserts weather data to appropriate slot
 
-    # normalize unix and demand data
-    formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
-    formatted_data[:, 0] /= np.max(formatted_data[:, 0])
-    # formatted_data[:,-1] /= np.max(formatted_data[:, -1])
+#     # normalize unix and demand data
+#     formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+#     formatted_data[:, 0] /= np.max(formatted_data[:, 0])
+#     # formatted_data[:,-1] /= np.max(formatted_data[:, -1])
 
-    return formatted_data
+#     return formatted_data
 
-def load_formatted_datav2(filepath):
-    data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
-    formatted_data = data[7] # use only one city
+# def load_formatted_datav2(filepath = "/Users/ngarg11/Energy-Forecasting/data/data.p"):
+#     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+#     data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
+#     formatted_data = data[7] # use only one city
 
-    # normalize unix and demand data
-    # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
-    # formatted_data[:, 0] /= np.max(formatted_data[:, 0])
+#     # normalize unix and demand data
+#     # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+#     # formatted_data[:, 0] /= np.max(formatted_data[:, 0])
     
-    # normalize demand data EXPERIMENT
-    # formatted_data[:, -1] = 1 / formatted_data[:, -1]
-    _min = np.min(formatted_data[:, -1])
-    _max = np.max(formatted_data[:, -1])
-    formatted_data[:, -1] -= _min
-    _max = np.max(formatted_data[:, -1])
-    formatted_data[:, -1] /= _max
+#     # normalize demand data EXPERIMENT
+#     # formatted_data[:, -1] = 1 / formatted_data[:, -1]
+#     _min = np.min(formatted_data[:, -1])
+#     _max = np.max(formatted_data[:, -1])
+#     formatted_data[:, -1] -= _min
+#     _max = np.max(formatted_data[:, -1])
+#     formatted_data[:, -1] /= _max
 
-    return formatted_data[:, 1:], _max, _min
+#     return formatted_data[:, 1:], _max, _min
 
-def load_formatted_datav3(filepath=DATAFILE_PATH):
+def load_formatted_datav3(filepath="/Users/ngarg11/Energy-Forecasting/data/data.p"):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
     data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
     # formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
@@ -128,7 +128,7 @@ def load_formatted_datav3(filepath=DATAFILE_PATH):
     # print(formatted_data[0][124])
 
     #Data is in right form now, with timestamp info, then weather info (only the 2 indices), then demand
-    x = np.zeros((132724 - 96, 124))
+    x = np.zeros((132724 - 96, 122))
     y = np.zeros((132724 - 96, 123)) 
 
     #depends on the 96
@@ -138,11 +138,14 @@ def load_formatted_datav3(filepath=DATAFILE_PATH):
     counter = 0
     days = 0
     while counter < len(formatted_data) - 150:
-        x[counter:counter + 96][:] = formatted_data[counter:(counter+96), 1:]
+
+        x[counter:counter + 96][:] = np.concatenate((formatted_data[counter:(counter+96), 1:-3], formatted_data[counter:(counter+96), -1:]), axis = 1)
+        
         y[counter:counter + 96][:] = formatted_data[counter + 96:(counter+192), 1:-1]
         z[days][:] = formatted_data[counter + 96:(counter+192), -1]
         counter += 96
         days += 1
+ 
     return x, y, z, _max, _min
 
 

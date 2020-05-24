@@ -84,7 +84,7 @@ for z in range(359176):
 BH_DataNew = pd.read_csv('./data/BH_DataNew.csv', engine='python')
 
 BH_DataNew['Date'] = pd.to_datetime((BH_DataNew['Date']))
-BH_DataNew['Date'] = ( BH_DataNew['Date']  - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+BH_DataNew['Date'] = (BH_DataNew['Date']  - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
 BH_DataNew['Date'] = BH_DataNew['Date'] + 900 * (BH_DataNew['Block'] - 23)
 BH_DataNew = BH_DataNew.rename(columns={"Date": "Unix"})
 BH_DataNew = BH_DataNew.drop(columns=['Block'])
