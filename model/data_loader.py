@@ -252,16 +252,16 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
     #demand
     else:
-        x = np.zeros((132724 - lookback, lookahead))
-        y = np.zeros((132724 - lookahead, 2 * lookahead)) 
         total_days = (132724 - 96)//96
+        x = np.zeros((total_days, 2 * lookback + lookahead))
+        y = np.zeros((total_days, 2 * lookahead)) 
         z = np.zeros((total_days, 96))
         counter = lookback
         days = 0
 
         while counter < len(formatted_data) - max(lookback, lookahead) + 100:
             x[days][:] = formatted_data[days*lookback: (days + 1) * lookback, -1:].reshape(3*lookback)
-            y[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -3:-1].reshape(2 * lookaheda)
+            y[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -3:-1].reshape(2 * lookahead)
             z[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -1]
             counter += 96
             days += 1
