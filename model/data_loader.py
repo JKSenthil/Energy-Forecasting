@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import datetime
-# from . import DATAFILE_PATH
+from . import DATAFILE_PATH
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
