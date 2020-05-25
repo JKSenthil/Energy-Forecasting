@@ -323,9 +323,9 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
         while counter < (len(formatted_data) - max(lookback, lookahead)*2):
             # print(((unix + data_points * number_cities + demand) *lookback))
             # print(len(formatted_data[0][:]))
-            x[days][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, :].reshape((data_points * number_cities + demand) *lookback)
-            y[days][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
-            z[days][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
+            x[days - 1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, :].reshape((data_points * number_cities + demand) *lookback)
+            y[days - 1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
+            z[days - 1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
             counter += day_timestamps
             days += 1
 
@@ -346,10 +346,9 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
             z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
             counter += day_timestamps
             days += 1
-
         return x, y, z, _max, _min   
-        
-         
+
+
     # print(formatted_data[ 0:96, -1])
     # print(data[7].head(30))
         
