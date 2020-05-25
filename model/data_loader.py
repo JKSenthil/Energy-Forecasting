@@ -106,7 +106,7 @@ def load_formatted_datav3(filepath="/Users/ngarg11/Energy-Forecasting/data/data.
 
     #putting all the weather/demand data after the time
     
-    columns_to_add = [-9, -7]
+    columns_to_add = [-8, -6]
     formatted_data[:, (0*data_points)+1 + years + months + days + timestamps :((0+1)*data_points)+1 + years + months + days + timestamps] = data[7][:, columns_to_add] # inserts weather data to appropriate slot
 
 
@@ -148,16 +148,9 @@ def load_formatted_datav3(filepath="/Users/ngarg11/Energy-Forecasting/data/data.
  
     return x, y, z, _max, _min
 
-def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/data/data.p"):
+def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/data/correctData.p"):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    # print(data[7].head(60))
-    # print(data[7][1])
-    # print(data[7][2])
-    # print(data[7][3])
-
     new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
-    # formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
-
     start = 1
     years = 6
     months = 12
@@ -170,9 +163,9 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     #originally 9
     data_points = 2 
     demand = 1
-
+    observations = len(data[0])
     # print(len(data[0])) number of data points
-    formatted_data = np.zeros((len(data[0]), unix + data_points * number_cities + demand + years + months + days + timestamps)) 
+    formatted_data = np.zeros((observations, unix + data_points * number_cities + demand + years + months + days + timestamps)) 
     #
     # insert unix time and demand
     formatted_data[:, 0] = new1_data[0][:,0] # unix
@@ -228,22 +221,22 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     
     _min = np.min(formatted_data[:, -1])
     _max = np.max(formatted_data[:, -1])
-    # formatted_data[:, -1] -= _min
+    formatted_data[:, -1] -= _min
     _max = np.max(formatted_data[:, -1])
-    # formatted_data[:, -1] /= _max
+    formatted_data[:, -1] /= _max
     
 
     # formatted_data = np.zeros((len(data[0]), unix + data_points * number_cities + demand + years + months + days + timestamps)) 
-
+    print(len(data[0]))
 
     lookback = 96
     lookahead = 96
 
     #only weather and demand
     if version:
-        total_days = (132724 - 96)//96
-        x = np.zeros((total_days, 2 * lookback + lookahead))
-        y = np.zeros((total_days, 2 * lookahead)) 
+        total_days = ( observations- 96)//96
+        x = np.zeros((total_days, (data_points * lookback * number_cities) + lookahead))
+        y = np.zeros((total_days, data_points * lookahead * number_cities)) 
         z = np.zeros((total_days, 96))
         counter = lookback
         days = 0
@@ -257,7 +250,7 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
     #demand
     else:
-        total_days = (132724 - 96)//96
+        total_days = (observations - 96)//96
         x = np.zeros((total_days, 2 * lookback + lookahead))
         y = np.zeros((total_days, 2 * lookahead)) 
         z = np.zeros((total_days, 96))

@@ -54,7 +54,7 @@ for i in range(len(historical_new)):
   historical_new[i].columns = cols_ultimate
   historical_new[i]['Unix'] = pd.to_datetime((historical_new[i]['Unix']))
   historical_new[i]['Unix'] = ( historical_new[i]['Unix']  - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')  
-  # historical_new[i][cols_ultimate_to_norm] = historical_new[i][cols_ultimate_to_norm].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+  historical_new[i][cols_ultimate_to_norm] = historical_new[i][cols_ultimate_to_norm].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
   
 for j in range(len(recent_new)):
   recent_new[j] = recent[j][:][:]
