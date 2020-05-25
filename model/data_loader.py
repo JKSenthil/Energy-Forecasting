@@ -150,7 +150,12 @@ def load_formatted_datav3(filepath="/Users/ngarg11/Energy-Forecasting/data/data.
 
 def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/data/data.p"):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
+    # print(data[7].head(60))
+    # print(data[7][1])
+    # print(data[7][2])
+    # print(data[7][3])
+
+    new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
     # formatted_data = np.zeros((len(data[0]), 1 + 9 * len(data) + 1)) # data to return to user
 
     start = 1
@@ -170,8 +175,8 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     formatted_data = np.zeros((len(data[0]), unix + data_points * number_cities + demand + years + months + days + timestamps)) 
     #
     # insert unix time and demand
-    formatted_data[:, 0] = data[0][:,0] # unix
-    formatted_data[:, -1] = data[0][:,-1] # demand
+    formatted_data[:, 0] = new1_data[0][:,0] # unix
+    formatted_data[:, -1] = new1_data[0][:,-1] # demand
     # print(data[0][0, -1])
 
     year_asc = {}
@@ -212,7 +217,7 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     
     #equals number of columns to add
     columns_to_add = [-9, -7]
-    formatted_data[:, (0*data_points)+1 + years + months + days + timestamps :((0+1)*data_points)+1 + years + months + days + timestamps] = data[7][:, columns_to_add] # inserts weather data to appropriate slot
+    formatted_data[:, (0*data_points)+1 + years + months + days + timestamps :((0+1)*data_points)+1 + years + months + days + timestamps] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
 
 
 
@@ -223,9 +228,9 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     
     _min = np.min(formatted_data[:, -1])
     _max = np.max(formatted_data[:, -1])
-    formatted_data[:, -1] -= _min
+    # formatted_data[:, -1] -= _min
     _max = np.max(formatted_data[:, -1])
-    formatted_data[:, -1] /= _max
+    # formatted_data[:, -1] /= _max
     
 
     # formatted_data = np.zeros((len(data[0]), unix + data_points * number_cities + demand + years + months + days + timestamps)) 
@@ -261,19 +266,19 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
         while counter < len(formatted_data) - max(lookback, lookahead) + 100:
             x[days][:] = formatted_data[days*lookback: (days + 1) * lookback, -1:].reshape(3*lookback)
-            y[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -3:-1].reshape(2 * lookahead)
+            y[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -3:-1].reshape(2 * lookaheadg)
             z[days][:] = formatted_data[(days+1)*lookahead: (days + 2) * lookahead, -1]
             counter += 96
             days += 1
 
-
-    print(x[0])
+    print(data[7].head(30))
     print(y[0])
-    print(z[0])
+    # print(y[0])
+    # print(z[0])
     return x, y, z, _max, _min
 
 
     #, _max, _min # drop unix
 
 # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p"))
-print(load_formatted_datav4(2, "/Users/ngarg11/Energy-Forecasting/data/data.p"))
+print(load_formatted_datav4(2))
