@@ -148,6 +148,8 @@ def load_formatted_datav3(filepath="/Users/ngarg11/Energy-Forecasting/data/data.
  
     return x, y, z, _max, _min
 
+
+
 def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/data/correctData.p"):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
     new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
@@ -273,5 +275,91 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
     #, _max, _min # drop unix
 
+def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/data/data.p"):
+    data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+    new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
+
+    unix = 1
+    number_cities = 1
+    data_points = 3
+    demand = 1
+    observations = len(data[0])
+        
+    formatted_data = np.zeros((observations, data_points * number_cities + demand)) 
+    
+    # insert unix time and demand
+    # formatted_data[:, 0] = new1_data[0][:,0] # unix
+    formatted_data[:, -1] = new1_data[0][:,-1] # demand
+        
+     # normalize unix and demand data
+    # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+    # formatted_data[:, 0] = (formatted_data[:, 0]  - np.min(formatted_data[:,0]))/ np.max(formatted_data[:, 0])
+    formatted_data[:, -1] = (formatted_data[:, -1]  - np.min(formatted_data[:,-1]))/ np.max(formatted_data[:, -1])
+    
+    _min = np.min(formatted_data[:, -1])
+    _max = np.max(formatted_data[:, -1])
+
+    #equals number of columns to add for just one city right now
+    columns_to_add = [-8, -6, -5]
+    formatted_data[:, (0*data_points) :((0+1)*data_points)] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
+
+
+
+    
+
+    lookback = 96
+    lookahead = 96
+    day_timestamps = 96
+
+    #only weather, and demand
+    if version:
+        total_days = (observations- day_timestamps)//day_timestamps
+        x = np.zeros((total_days, (data_points * lookback * number_cities) + lookahead))
+        y = np.zeros((total_days, (data_points * lookahead * number_cities) )) 
+        z = np.zeros((total_days, day_timestamps))
+        counter = lookback
+        days = 1
+
+        while counter < (len(formatted_data) - max(lookback, lookahead)*2):
+            # print(((unix + data_points * number_cities + demand) *lookback))
+            # print(len(formatted_data[0][:]))
+            x[days][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, :].reshape((data_points * number_cities + demand) *lookback)
+            y[days][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
+            z[days][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
+            counter += day_timestamps
+            days += 1
+
+        return x, y, z, _max, _min
+
+    #demand
+    else:
+        total_days = (observations - day_timestamps)//day_timestamps
+        x = np.zeros((total_days,(data_points * lookback * number_cities) + lookahead))
+        y = np.zeros((total_days, data_points * number_cities * lookahead)) 
+        z = np.zeros((total_days, day_timestamps))
+        counter = lookback
+        days = 1
+
+        while counter < len(formatted_data) - max(lookback, lookahead) + 100:
+            x[days-1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, -1].reshape(demand *lookback)
+            y[days-1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
+            z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
+            counter += day_timestamps
+            days += 1
+
+        return x, y, z, _max, _min   
+        
+         
+    # print(formatted_data[ 0:96, -1])
+    # print(data[7].head(30))
+        
+    # print(y[0])
+    # print(y[0])
+    # print(z[0])
+    
+
+
+
+
 # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p"))
-print(load_formatted_datav4(2))
+print(load_formatted_datav5(1))
