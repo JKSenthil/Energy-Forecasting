@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import datetime
-from . import DATAFILE_PATH
+# from . import DATAFILE_PATH
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
@@ -314,7 +314,7 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     #only weather, and demand
     if version:
         total_days = (observations- day_timestamps)//day_timestamps
-        x = np.zeros((total_days, (data_points * lookback * number_cities) + lookahead))
+        x = np.zeros((total_days, ((data_points * number_cities + demand) * lookback )))
         y = np.zeros((total_days, (data_points * lookahead * number_cities) )) 
         z = np.zeros((total_days, day_timestamps))
         counter = lookback
@@ -361,4 +361,4 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
 
 # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p"))
-print(load_formatted_datav5(1))
+print(load_formatted_datav5(2))
