@@ -1,8 +1,13 @@
+import os
 import pickle
 import numpy as np
 import pandas as pd
 import datetime
 # from . import DATAFILE_PATH
+
+MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.join(MODEL_DIR, "..")
+DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data.p")
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
@@ -275,7 +280,7 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
     #, _max, _min # drop unix
 
-def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/data/data.p"):
+def load_formatted_datav5(version, filepath=DATAFILE_PATH):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
     new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
 
@@ -285,7 +290,7 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     demand = 1
     observations = len(data[0])
         
-    formatted_data = np.zeros((observations, data_points * number_cities + demand)) 
+    formatted_data = np.zeros((observations, data_points * number_cities + demand))
     
     # insert unix time and demand
     # formatted_data[:, 0] = new1_data[0][:,0] # unix
@@ -294,18 +299,13 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
      # normalize unix and demand data
     # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
     # formatted_data[:, 0] = (formatted_data[:, 0]  - np.min(formatted_data[:,0]))/ np.max(formatted_data[:, 0])
-    formatted_data[:, -1] = (formatted_data[:, -1]  - np.min(formatted_data[:,-1]))/ np.max(formatted_data[:, -1])
-    
     _min = np.min(formatted_data[:, -1])
     _max = np.max(formatted_data[:, -1])
+    formatted_data[:, -1] = (formatted_data[:, -1] - _min) / _max
 
     #equals number of columns to add for just one city right now
     columns_to_add = [-8, -6, -5]
     formatted_data[:, (0*data_points) :((0+1)*data_points)] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
-
-
-
-    
 
     lookback = 96
     lookahead = 96
@@ -329,6 +329,9 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
             counter += day_timestamps
             days += 1
 
+        x = np.reshape(x, (x.shape[0], -1, 4))
+        y = np.reshape(y, (y.shape[0], -1, 3))
+
         return x, y, z, _max, _min
 
     #demand
@@ -346,6 +349,8 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
             z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
             counter += day_timestamps
             days += 1
+        
+        y = np.reshape(y, (y.shape[0], -1, 3))
         return x, y, z, _max, _min   
 
 
@@ -355,10 +360,7 @@ def load_formatted_datav5(version, filepath="/Users/ngarg11/Energy-Forecasting/d
     # print(y[0])
     # print(y[0])
     # print(z[0])
-    
 
-
-
-
-# print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p"))
-print(load_formatted_datav5(2))
+if __name__ == "__main__":
+    # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p")) 
+    print(load_formatted_datav5(False))
