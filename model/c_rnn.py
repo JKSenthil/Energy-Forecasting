@@ -7,18 +7,23 @@ class cRNN(nn.Module):
     Implements a conditional Recurrent Neural Network as guided by 
     https://datascience.stackexchange.com/questions/17099/adding-features-to-time-series-model-lstm/17139#17139
     """
-    def __init__(self, lag_size, gru_inputsize, hidden_size):
+    def __init__(self, lag_size, latent_size, weather_size, gru_hiddensize=256):
         super(cRNN, self).__init__()
-        self.dense1 = nn.Linear(lag_size, hidden_size)
-        self.gru = nn.GRUCell(gru_inputsize, hidden_size)
-        self.dense3 = nn.Linear(hidden_size, 1)
-        # self.dense4 = nn.Linear(64, 1)
+        self.encoder = nn.Sequential(
+            nn.Linear(lag_size, 64),
+            nn.LeakyReLU(),
+            nn.Linear(64, latent_size),
+            nn.LeakyReLU(),
+            nn.Linear(latent_size, gru_hiddensize)
+        )
+        self.gru = nn.GRUCell(weather_size, gru_hiddensize)
+        self.dense3 = nn.Linear(gru_hiddensize, 1)
     
     def forward(self, lag, curr):
         outputs = []
         
         # embed lag information into hidden state
-        h_t = self.dense1(lag)
+        h_t = self.encoder(lag)
         for weather in curr:
             h_t = self.gru(weather, h_t)
             prediction = self.dense3(h_t)

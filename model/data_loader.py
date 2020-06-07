@@ -7,7 +7,7 @@ import datetime
 
 MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(MODEL_DIR, "..")
-DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data.p")
+DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data_new.p")
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
@@ -282,6 +282,7 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
 def load_formatted_datav5(version, filepath=DATAFILE_PATH):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+    # data[7].to_excel("test.xlsx")
     new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
 
     unix = 1
@@ -308,7 +309,7 @@ def load_formatted_datav5(version, filepath=DATAFILE_PATH):
     formatted_data[:, (0*data_points) :((0+1)*data_points)] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
 
     lookback = 96
-    lookahead = 96
+    lookahead = 4
     day_timestamps = 96
 
     #only weather, and demand
@@ -316,7 +317,7 @@ def load_formatted_datav5(version, filepath=DATAFILE_PATH):
         total_days = (observations- day_timestamps)//day_timestamps
         x = np.zeros((total_days, ((data_points * number_cities + demand) * lookback )))
         y = np.zeros((total_days, (data_points * lookahead * number_cities) )) 
-        z = np.zeros((total_days, day_timestamps))
+        z = np.zeros((total_days, lookahead))
         counter = lookback
         days = 1
 
@@ -339,16 +340,15 @@ def load_formatted_datav5(version, filepath=DATAFILE_PATH):
         total_days = (observations - day_timestamps)//day_timestamps
         x = np.zeros((total_days,lookback * number_cities))
         y = np.zeros((total_days, data_points * number_cities * lookahead)) 
-        z = np.zeros((total_days, day_timestamps))
+        z = np.zeros((total_days, lookahead))
         counter = lookback
         days = 1
 
-        while counter < len(formatted_data) - max(lookback, lookahead) + 100:
-            
+        while counter < (len(formatted_data) - max(lookback, lookahead)*2):
             x[days-1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, -1].reshape(demand *lookback)
             y[days-1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
             z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
-            counter += day_timestamps
+            counter += 1 #day_timestamps
             days += 1
         
         y = np.reshape(y, (y.shape[0], -1, 3))

@@ -8,7 +8,7 @@ from model.rnn import RNN
 from model.c_rnn import cRNN, cRNNv2
 from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
-from model.data_loader import load_formatted_datav2, load_formatted_datav3, load_formatted_datav5
+from model.data_loader import load_formatted_datav5
 
 from experiments import EXPERIMENTS_DIR
 
@@ -16,13 +16,34 @@ from experiments import EXPERIMENTS_DIR
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class DemandWeatherDataset(Dataset):
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, flatten=False):
+        self.flatten = flatten
         self.x = x
-        self.y = y
+        if not flatten:
+            self.y = y
+        else:
+            self.y = np.reshape(y, (y.shape[0], -1))
         self.z = z
-        
 
-def train_test_split(data, percentage=0.8):
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        if self.flatten:
+            return (self.x[idx,:], self.y[idx], self.z[idx, :])
+        return (self.x[idx,:], self.y[idx,:,:], self.z[idx, :])
+
+def cut_data(data, percentage=0.5, first=False):
+    n = len(data)
+    if first:
+        size = int(n * (1-percentage))
+    else:
+        size = int(n * percentage)
+    if first:
+        return data[size:,:]
+    return data[:size,:]
+
+def train_test_split(data, percentage=0.9):
     """
     Splits first x percent of data into train, the other test
     """
@@ -40,48 +61,47 @@ def random_train_test_split(data, percentage=0.8):
     train_size = int(n * percentage)
     return data[:train_size], data[train_size:]
 
-def train_basicMLP(model, optimizer, loss_function, data, num_epochs, batch_size, n_prev=96*3, n_out=96):
-    """
-    model: BasicMLP model to train
-    data: formatted data to work with
-    num_epochs: number of times model trains on whole data
-    batch_size: simultanous data model trains on (right value can speed up model convergence)
-    n_out: number of timesteps to predict demand for
-    """
-    # initialize training infrastructure vars
-    indicies = np.arange(n_prev, len(data)-n_out)
-    num_batches = (len(data) // batch_size) - batch_size
-    prev_size = len(data)*7*96
-    for i in range(num_epochs):
-        print("Starting epoch {}".format(i+1))
-        
-        # shuffles indicies to essentially shuffle training data order
-        np.random.shuffle(indicies)
+def train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=1000, batch_size=32):
+    x = cut_data(x)
+    y = cut_data(y)
+    z = cut_data(z)
 
-        for j in range(num_batches):
-            # initialize batch data array
-            batch_X = torch.zeros((batch_size, prev_size)).to(device)
-            batch_curr_weather = torch.zeros((batch_size, n_out*(len(data) - 1))).to(device)
-            batch_Y = np.zeros((batch_size, n_out))
-            for k in range(j*batch_size,(j+1)*batch_size):
-                l = indicies[k]
-                _prev_data = torch.from_numpy(data[l-n_prev:l,:]).float().to(device)
-                batch_X[k % batch_size, :] = _prev_data
-                _curr_data = torch.from_numpy(data[l:l+n_out, :-1]).float().to(device)
-                batch_curr_weather[k % batch_size, :] = _curr_data
+    x_train, x_test = train_test_split(x)
+    y_train, y_test = train_test_split(y)
+    z_train, z_test = train_test_split(z)
 
-                batch_Y[k % batch_size, :] = data[l:l+n_out, -1]
+    train_dataset = DemandWeatherDataset(x_train, y_train, z_train, flatten=True)
+    test_dataset = DemandWeatherDataset(x_test, y_test, z_test, flatten=True)
+    train_gen = DataLoader(train_dataset, batch_size=32, shuffle=True, drop_last=True)
+    test_gen = DataLoader(test_dataset, batch_size=32, shuffle=True, drop_last=True)
 
-            batch_Y = torch.from_numpy(batch_Y).float().to(device)
+    for epoch in range(num_epochs):
+        train_loss = 0
+        for x, y, z in train_gen:
+            x = x.float()
+            y = y.float()
+            z = z.float()
 
-            # compute backprop for model
             optimizer.zero_grad()
-            y_pred = model(batch_X, batch_curr_weather)
-            loss = loss_function((batch_Y * _max) + _min, (y_pred * _max) + _min)
+            y_pred = model.forward(x, y)
+            loss = loss_function((z * _max) + _min, (y_pred * _max) + _min)
             loss.backward()
             optimizer.step()
-            
-            print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
+
+            train_loss += loss
+
+        test_loss = 0
+        for x, y, z in test_gen:
+            x = x.float()
+            y = y.float()
+            z = z.float()
+
+            test_loss += loss_function((z * _max) + _min, (y_pred * _max) + _min)
+
+        avg_train_loss = train_loss / (len(train_gen) * batch_size)
+        avg_test_loss = test_loss / (len(test_gen) * batch_size)
+
+        print("Epoch {} of {} done, train loss={}, test loss={}".format(epoch + 1, num_epochs, avg_train_loss, avg_test_loss))
 
 def train_crnn_deprecated(model, optimizer, loss_function, data, num_epochs, batch_size, n_prev, n_out):
     train_gen = DataLoader(data, batch_size=32, shuffle=True, drop_last=True)
@@ -120,7 +140,67 @@ def train_crnn_deprecated(model, optimizer, loss_function, data, num_epochs, bat
             print("Batch {} of {} done, loss={}".format(j+1, num_batches, loss))
 
 def train_crnn(model, optimizer, loss_function, x, y, z, num_epochs=1000, batch_size=32):
+    x = cut_data(x)
+    y = cut_data(y)
+    z = cut_data(z)
     
+    x_train, x_test = train_test_split(x)
+    y_train, y_test = train_test_split(y)
+    z_train, z_test = train_test_split(z)
+
+    train_dataset = DemandWeatherDataset(x_train, y_train, z_train)
+    test_dataset = DemandWeatherDataset(x_test, y_test, z_test)
+    train_gen = DataLoader(train_dataset, batch_size=32, shuffle=True, drop_last=True)
+    test_gen = DataLoader(test_dataset, batch_size=32, shuffle=True, drop_last=True)
+
+    for epoch in range(num_epochs):
+        train_loss = 0
+        for x, y, z in train_gen:
+            x = x.float()
+            # y = y.float().permute((1,0,2))
+            z = z.float()
+
+            optimizer.zero_grad()
+            y_pred = model.forward(x, y)
+            loss = loss_function((z * _max) + _min, (y_pred * _max) + _min)
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss
+
+        test_loss = 0
+        for x, y, z in test_gen:
+            x = x.float()
+            y = y.float().permute((1,0,2))
+            z = z.float()
+
+            test_loss += loss_function((z * _max) + _min, (y_pred * _max) + _min)
+
+        avg_train_loss = train_loss / (len(train_gen) * batch_size)
+        avg_test_loss = test_loss / (len(test_gen) * batch_size)
+
+        print("Epoch {} of {} done, train loss={}, test loss={}".format(epoch + 1, num_epochs, avg_train_loss, avg_test_loss))
+
+def example_pass(model, x, y, z):
+    x0 = np.expand_dims(x[-500, :], 0)
+    y0 = np.expand_dims(y[-500, :, :].flatten(), 0)
+    z0 = np.expand_dims(z[-500, :], 0)
+
+    x0 = torch.from_numpy(x0).float()#.to(device)
+    y0 = torch.from_numpy(y0).float()#.to(device)
+    z0 = torch.from_numpy(z0).float()#.to(device)
+
+    print(x0.size())
+    print(y0.size())
+    print(z0.size())
+
+    output = model.forward(x0, y0)
+    output = output.data.numpy()
+    z0 = z0.data.numpy()
+    for pred, real in zip(output, z0):
+        print(pred * _max + _min, real * _max + _min)
+
+
 # ================ TRAIN AUTOENCODER ======================== #
 # data = load_formatted_datav3()
 # # data = data[:,:-1] # drop demand data
@@ -159,6 +239,12 @@ def train_crnn(model, optimizer, loss_function, x, y, z, num_epochs=1000, batch_
 
 # ================ TRAIN finale ======================== #
 x, y, z, _max, _min = load_formatted_datav5(False)
+# model = cRNN(lag_size=96, latent_size=16, weather_size=3, gru_hiddensize=64)
+model = BasicMLP(96, 4 * 3, n_out=4)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+loss_function = nn.MSELoss().to(device)
+train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=20)
+example_pass(model, x, y, z)
 # =================================================== $
 
 # ================ TRAIN MLP ======================== #
