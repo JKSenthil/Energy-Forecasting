@@ -337,13 +337,14 @@ def load_formatted_datav5(version, filepath=DATAFILE_PATH):
     #demand
     else:
         total_days = (observations - day_timestamps)//day_timestamps
-        x = np.zeros((total_days,(data_points * lookback * number_cities) + lookahead))
+        x = np.zeros((total_days,lookback * number_cities))
         y = np.zeros((total_days, data_points * number_cities * lookahead)) 
         z = np.zeros((total_days, day_timestamps))
         counter = lookback
         days = 1
 
         while counter < len(formatted_data) - max(lookback, lookahead) + 100:
+            
             x[days-1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, -1].reshape(demand *lookback)
             y[days-1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
             z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
