@@ -7,7 +7,7 @@ import datetime
 
 MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(MODEL_DIR, "..")
-DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data_new.p")
+# DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data_new.p")
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
@@ -280,22 +280,109 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 
     #, _max, _min # drop unix
 
-def load_formatted_datav5(version, filepath=DATAFILE_PATH):
-    data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    # data[7].to_excel("test.xlsx")
-    new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
+# def load_formatted_datav5(version, filepath=DATAFILE_PATH):
+#     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+#     # data[7].to_excel("test.xlsx")
+#     new1_data = [df.to_numpy() for df in data] # convert from pandas dataframe to numpy
 
-    unix = 1
-    number_cities = 1
+#     unix = 1
+#     number_cities = 1
+#     data_points = 3
+#     demand = 1
+#     observations = len(data[0])
+        
+#     formatted_data = np.zeros((observations, data_points * number_cities + demand))
+    
+#     # insert unix time and demand
+#     # formatted_data[:, 0] = new1_data[0][:,0] # unix
+#     formatted_data[:, -1] = new1_data[0][:,-1] # demand
+        
+#      # normalize unix and demand data
+#     # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
+#     # formatted_data[:, 0] = (formatted_data[:, 0]  - np.min(formatted_data[:,0]))/ np.max(formatted_data[:, 0])
+#     _min = np.min(formatted_data[:, -1])
+#     _max = np.max(formatted_data[:, -1])
+#     formatted_data[:, -1] = (formatted_data[:, -1] - _min) / _max
+
+#     #equals number of columns to add for just one city right now
+#     columns_to_add = [-8, -6, -5]
+#     formatted_data[:, (0*data_points) :((0+1)*data_points)] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
+
+#     lookback = 96
+#     lookahead = 4
+#     day_timestamps = 96
+
+#     #only weather, and demand
+#     if version:
+#         total_days = (observations- day_timestamps)//day_timestamps
+#         x = np.zeros((total_days, ((data_points * number_cities + demand) * lookback )))
+#         y = np.zeros((total_days, (data_points * lookahead * number_cities) )) 
+#         z = np.zeros((total_days, lookahead))
+#         counter = lookback
+#         days = 1
+
+#         while counter < (len(formatted_data) - max(lookback, lookahead)*2):
+#             # print(((unix + data_points * number_cities + demand) *lookback))
+#             # print(len(formatted_data[0][:]))
+#             x[days - 1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, :].reshape((data_points * number_cities + demand) *lookback)
+#             y[days - 1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
+#             z[days - 1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
+#             counter += day_timestamps
+#             days += 1
+
+#         x = np.reshape(x, (x.shape[0], -1, 4))
+#         y = np.reshape(y, (y.shape[0], -1, 3))
+
+#         return x, y, z, _max, _min
+
+#     #demand
+#     else:
+#         total_days = (observations - day_timestamps)//day_timestamps
+#         x = np.zeros((total_days,lookback * number_cities))
+#         y = np.zeros((total_days, data_points * number_cities * lookahead)) 
+#         z = np.zeros((total_days, lookahead))
+#         counter = lookback
+#         days = 1
+
+#         while counter < (len(formatted_data) - max(lookback, lookahead)*2):
+#             x[days-1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, -1].reshape(demand *lookback)
+#             y[days-1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
+#             z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
+#             counter += 1 #day_timestamps
+#             days += 1
+        
+#         y = np.reshape(y, (y.shape[0], -1, 3))
+#         return x, y, z, _max, _min   
+
+
+def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, weights_wanted=True, filepath="../data/data.p"):
+    data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
+    
+    #Based on weights excel
+    weights = [0.122720217, 0.049748383, 0.072243518, 0.122720217, 0.065588582, 0.095043197, 0.071223588, 0.311434636, 0.070185194, 0.058112692]
+    #For small accuracy errors
+    weights = [weight/sum(weights) for weight in weights]
+    
+    if weights_wanted:
+        for counter, value in enumerate(weights):
+            data[counter] *= value
+    data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
+    if not post:
+        data = data[data['Unix' >= 1585094400]] 
+    new1_data = data.to_numpy() # convert from pandas dataframe to numpy
+
+    data = (data-data.min())/(data.max()-data.min())
+    data.to_excel("weighted_data.xlsx")
+    
     data_points = 3
     demand = 1
-    observations = len(data[0])
+    observations = len(new1_data)
         
-    formatted_data = np.zeros((observations, data_points * number_cities + demand))
+    formatted_data = np.zeros((observations, data_points + demand))
     
     # insert unix time and demand
     # formatted_data[:, 0] = new1_data[0][:,0] # unix
-    formatted_data[:, -1] = new1_data[0][:,-1] # demand
+    formatted_data[:, -1] = new1_data[:,-1] # demand
         
      # normalize unix and demand data
     # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
@@ -306,62 +393,51 @@ def load_formatted_datav5(version, filepath=DATAFILE_PATH):
 
     #equals number of columns to add for just one city right now
     columns_to_add = [-8, -6, -5]
-    formatted_data[:, (0*data_points) :((0+1)*data_points)] = new1_data[7][:, columns_to_add] # inserts weather data to appropriate slot
+    formatted_data[:, 0:data_points] = new1_data[:, columns_to_add] # inserts weather data to appropriate slot
 
-    lookback = 96
-    lookahead = 4
+    to_predict = 12
     day_timestamps = 96
 
     #only weather, and demand
     if version:
-        total_days = (observations- day_timestamps)//day_timestamps
-        x = np.zeros((total_days, ((data_points * number_cities + demand) * lookback )))
-        y = np.zeros((total_days, (data_points * lookahead * number_cities) )) 
-        z = np.zeros((total_days, lookahead))
-        counter = lookback
-        days = 1
-
-        while counter < (len(formatted_data) - max(lookback, lookahead)*2):
+        #start at timestamp lookback
+        x = np.zeros((observations-lookback-lookahead, ((data_points + demand) * lookback )))
+        #start at timestamp lookback
+        y = np.zeros((observations-lookback-lookahead, (data_points * lookahead))) 
+        z = np.zeros((observations-lookback-lookahead, to_predict))
+        timestamp = 0
+        for counter in range(lookback, observations - lookahead):
             # print(((unix + data_points * number_cities + demand) *lookback))
             # print(len(formatted_data[0][:]))
-            x[days - 1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, :].reshape((data_points * number_cities + demand) *lookback)
-            y[days - 1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
-            z[days - 1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
-            counter += day_timestamps
-            days += 1
+            x[timestamp][:] = formatted_data[counter-lookback:counter, :].reshape((data_points + demand) *lookback)
+            y[timestamp][:] = formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z[timestamp][:] = formatted_data[counter: counter+to_predict, -1]
+            timestamp += 1
 
         x = np.reshape(x, (x.shape[0], -1, 4))
         y = np.reshape(y, (y.shape[0], -1, 3))
 
-        return x, y, z, _max, _min
 
     #demand
     else:
-        total_days = (observations - day_timestamps)//day_timestamps
-        x = np.zeros((total_days,lookback * number_cities))
-        y = np.zeros((total_days, data_points * number_cities * lookahead)) 
-        z = np.zeros((total_days, lookahead))
-        counter = lookback
-        days = 1
-
-        while counter < (len(formatted_data) - max(lookback, lookahead)*2):
-            x[days-1][:] = formatted_data[ (days - 1) * lookback: (days) * lookback, -1].reshape(demand *lookback)
-            y[days-1][:] = formatted_data[ (days)*lookahead: (days + 1) * lookahead, 0:-1].reshape((data_points * number_cities) * lookahead)
-            z[days-1][:] = formatted_data[   (days)*lookahead: (days + 1) * lookahead, -1]
-            counter += 1 #day_timestamps
-            days += 1
+       #start at timestamp lookback
+        x = np.zeros((observations-lookback-lookahead, (demand) * lookback ))
+        #start at timestamp lookback
+        y = np.zeros((observations-lookback-lookahead, (data_points * lookahead))) 
+        z = np.zeros((observations-lookback-lookahead, to_predict))
+        timestamp = 0
+        for counter in range(lookback, observations - lookahead):
+            # print(((unix + data_points * number_cities + demand) *lookback))
+            # print(len(formatted_data[0][:]))
+            x[timestamp][:] = formatted_data[counter-lookback:counter, -1].reshape(demand *lookback)
+            y[timestamp][:] = formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z[timestamp][:] = formatted_data[counter: counter+to_predict , -1]
+            timestamp += 1
         
         y = np.reshape(y, (y.shape[0], -1, 3))
-        return x, y, z, _max, _min   
 
-
-    # print(formatted_data[ 0:96, -1])
-    # print(data[7].head(30))
-        
-    # print(y[0])
-    # print(y[0])
-    # print(z[0])
+    return x, y, z, _max, _min   
 
 if __name__ == "__main__":
     # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p")) 
-    print(load_formatted_datav5(False))
+    print(load_formatted_datav6(True))
