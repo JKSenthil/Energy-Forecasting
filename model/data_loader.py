@@ -362,6 +362,8 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     weights = [0.122720217, 0.049748383, 0.072243518, 0.122720217, 0.065588582, 0.095043197, 0.071223588, 0.311434636, 0.070185194, 0.058112692]
     #For small accuracy errors
     weights = [weight/sum(weights) for weight in weights]
+
+   
     
     if weights_wanted:
         for counter, value in enumerate(weights):
@@ -369,9 +371,15 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
     if not post:
         data = data[data['Unix' >= 1585094400]] 
-    new1_data = data.to_numpy() # convert from pandas dataframe to numpy
+
+     #to reverse demand normalization
+    _min = data.min(axis=0)['Demand']
+    _max =  data.max(axis=0)['Demand']
 
     data = (data-data.min())/(data.max()-data.min())
+    new1_data = data.to_numpy() # convert from pandas dataframe to numpy
+
+    
     data.to_excel("weighted_data.xlsx")
     
     data_points = 3
@@ -384,12 +392,7 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     # formatted_data[:, 0] = new1_data[0][:,0] # unix
     formatted_data[:, -1] = new1_data[:,-1] # demand
         
-     # normalize unix and demand data
-    # formatted_data[:, 0] = formatted_data[:, 0] % (1440 * 60) # converts to time of day
-    # formatted_data[:, 0] = (formatted_data[:, 0]  - np.min(formatted_data[:,0]))/ np.max(formatted_data[:, 0])
-    _min = np.min(formatted_data[:, -1])
-    _max = np.max(formatted_data[:, -1])
-    formatted_data[:, -1] = (formatted_data[:, -1] - _min) / _max
+
 
     #equals number of columns to add for just one city right now
     columns_to_add = [-8, -6, -5]
