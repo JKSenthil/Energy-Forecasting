@@ -7,7 +7,7 @@ import datetime
 
 MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(MODEL_DIR, "..")
-# DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data_new.p")
+DATAFILE_PATH = os.path.join(ROOT_DIR, "data", "data.p")
 
 # def load_formatted_data(filepath=DATAFILE_PATH):
 #     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
@@ -355,9 +355,8 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 #         return x, y, z, _max, _min   
 
 
-def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, weights_wanted=True, filepath="../data/data.p"):
+def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, weights_wanted=True, filepath=DATAFILE_PATH):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
-    
     #Based on weights excel
     weights = [0.122720217, 0.049748383, 0.072243518, 0.122720217, 0.065588582, 0.095043197, 0.071223588, 0.311434636, 0.070185194, 0.058112692]
     #For small accuracy errors
@@ -368,9 +367,10 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     if weights_wanted:
         for counter, value in enumerate(weights):
             data[counter] *= value
+
     data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
     if not post:
-        data = data[data['Unix' >= 1585094400]] 
+        data = data[data['Unix' <= 1585094400]] 
 
      #to reverse demand normalization
     _min = data.min(axis=0)['Demand']
@@ -378,9 +378,6 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
 
     data = (data-data.min())/(data.max()-data.min())
     new1_data = data.to_numpy() # convert from pandas dataframe to numpy
-
-    
-    data.to_excel("weighted_data.xlsx")
     
     data_points = 3
     demand = 1
@@ -391,8 +388,6 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     # insert unix time and demand
     # formatted_data[:, 0] = new1_data[0][:,0] # unix
     formatted_data[:, -1] = new1_data[:,-1] # demand
-        
-
 
     #equals number of columns to add for just one city right now
     columns_to_add = [-8, -6, -5]

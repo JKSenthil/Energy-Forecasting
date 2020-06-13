@@ -8,12 +8,30 @@ from model.rnn import RNN
 from model.c_rnn import cRNN, cRNNv2
 from model.mlp import BasicMLP
 from model.autoencoder import AutoEncoder
-from model.data_loader import load_formatted_datav5
+from model.data_loader import load_formatted_datav6
 
 from experiments import EXPERIMENTS_DIR
 
 # use gpu if available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+class DemandWeatherDataset_Deprecated(Dataset):
+    def __init__(self, x, y, z, flatten=False):
+        self.flatten = flatten
+        self.x = x
+        if not flatten:
+            self.y = y
+        else:
+            self.y = np.reshape(y, (y.shape[0], -1))
+        self.z = z
+
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        if self.flatten:
+            return (self.x[idx,:], self.y[idx], self.z[idx, :])
+        return (self.x[idx,:], self.y[idx,:,:], self.z[idx, :])
 
 class DemandWeatherDataset(Dataset):
     def __init__(self, x, y, z, flatten=False):
@@ -32,6 +50,7 @@ class DemandWeatherDataset(Dataset):
         if self.flatten:
             return (self.x[idx,:], self.y[idx], self.z[idx, :])
         return (self.x[idx,:], self.y[idx,:,:], self.z[idx, :])
+
 
 def cut_data(data, percentage=0.5, first=False):
     n = len(data)
@@ -62,9 +81,9 @@ def random_train_test_split(data, percentage=0.8):
     return data[:train_size], data[train_size:]
 
 def train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=1000, batch_size=32):
-    x = cut_data(x)
-    y = cut_data(y)
-    z = cut_data(z)
+    # x = cut_data(x)
+    # y = cut_data(y)
+    # z = cut_data(z)
 
     x_train, x_test = train_test_split(x)
     y_train, y_test = train_test_split(y)
@@ -77,6 +96,7 @@ def train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=1000, ba
 
     for epoch in range(num_epochs):
         train_loss = 0
+        i = 0
         for x, y, z in train_gen:
             x = x.float()
             y = y.float()
@@ -84,11 +104,15 @@ def train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=1000, ba
 
             optimizer.zero_grad()
             y_pred = model.forward(x, y)
-            loss = loss_function((z * _max) + _min, (y_pred * _max) + _min)
+            
+            loss = loss_function(z*(_max - _min) + _min, y_pred*(_max - _min) + _min)
             loss.backward()
             optimizer.step()
 
             train_loss += loss
+
+            print("Batch {} has loss {}".format(i + 1, loss))
+            i += 1
 
         test_loss = 0
         for x, y, z in test_gen:
@@ -96,8 +120,8 @@ def train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=1000, ba
             y = y.float()
             z = z.float()
 
-            test_loss += loss_function((z * _max) + _min, (y_pred * _max) + _min)
-
+            test_loss += loss_function(z*(_max - _min) + _min, y_pred*(_max - _min) + _min)
+        
         avg_train_loss = train_loss / (len(train_gen) * batch_size)
         avg_test_loss = test_loss / (len(test_gen) * batch_size)
 
@@ -198,7 +222,7 @@ def example_pass(model, x, y, z):
     output = output.data.numpy()
     z0 = z0.data.numpy()
     for pred, real in zip(output, z0):
-        print(pred * _max + _min, real * _max + _min)
+        print(pred*(_max - _min) + _min, real*(_max - _min) + _min)
 
 
 # ================ TRAIN AUTOENCODER ======================== #
@@ -238,12 +262,13 @@ def example_pass(model, x, y, z):
 # =================================================== #
 
 # ================ TRAIN finale ======================== #
-x, y, z, _max, _min = load_formatted_datav5(False)
+x, y, z, _max, _min = load_formatted_datav6(False)
+print(_max, _min)
 # model = cRNN(lag_size=96, latent_size=16, weather_size=3, gru_hiddensize=64)
-model = BasicMLP(96, 4 * 3, n_out=4)
+model = BasicMLP(96, 3 * 12, n_out=12)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 loss_function = nn.MSELoss().to(device)
-train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=20)
+# train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=5)
 example_pass(model, x, y, z)
 # =================================================== $
 

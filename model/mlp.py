@@ -6,7 +6,7 @@ class BasicMLP(nn.Module):
     Neural Network which only uses current weather to
     make immediate energy demand prediction, 1 time step
     """
-    def __init__(self, prev_len, curr_len, n_out=96):
+    def __init__(self, prev_len, curr_len, n_out):
         super(BasicMLP, self).__init__()
 
         self.model = nn.Sequential(
