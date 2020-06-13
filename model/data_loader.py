@@ -361,8 +361,9 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     weights = [0.122720217, 0.049748383, 0.072243518, 0.122720217, 0.065588582, 0.095043197, 0.071223588, 0.311434636, 0.070185194, 0.058112692]
     #For small accuracy errors
     weights = [weight/sum(weights) for weight in weights]
-    print(data[6]['Demand'].tail())
-    
+    _min = min(data[0]['Demand'])
+    _max = max(data[0]['Demand'])
+
     if weights_wanted:
         for counter, value in enumerate(weights):
             data[counter] *= value
@@ -373,8 +374,7 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
         data = data[data['Unix' <= 1585094400]] 
 
      #to reverse demand normalization
-    _min = data.min(axis=0)['Demand']
-    _max =  data.max(axis=0)['Demand']
+    
 
     data = (data-data.min())/(data.max()-data.min())
     new1_data = data.to_numpy() # convert from pandas dataframe to numpy
