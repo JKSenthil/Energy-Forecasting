@@ -375,6 +375,7 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
      #to reverse demand normalization
     _min = data.min(axis=0)['Demand']
     _max =  data.max(axis=0)['Demand']
+    print(_min, _max)
 
     data = (data-data.min())/(data.max()-data.min())
     new1_data = data.to_numpy() # convert from pandas dataframe to numpy
