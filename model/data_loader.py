@@ -355,20 +355,20 @@ def load_formatted_datav4(version, filepath="/Users/ngarg11/Energy-Forecasting/d
 #         return x, y, z, _max, _min   
 
 
-def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, weights_wanted=True, filepath=DATAFILE_PATH):
+def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, weights_wanted=False, filepath=DATAFILE_PATH):
     data = pickle.load(open(filepath, "rb")) # opens our preprocessed data file stored as a pickle
     #Based on weights excel
     weights = [0.122720217, 0.049748383, 0.072243518, 0.122720217, 0.065588582, 0.095043197, 0.071223588, 0.311434636, 0.070185194, 0.058112692]
     #For small accuracy errors
     weights = [weight/sum(weights) for weight in weights]
-
-   
+    print(data[6]['Demand'].tail())
     
     if weights_wanted:
         for counter, value in enumerate(weights):
             data[counter] *= value
 
     data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
+    data *= 1.0/np.mean(weights)
     if not post:
         data = data[data['Unix' <= 1585094400]] 
 
