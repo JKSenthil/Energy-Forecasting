@@ -364,34 +364,52 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     _min = min(data[0]['Demand'])
     _max = max(data[0]['Demand'])
 
+
     if weights_wanted:
         for counter, value in enumerate(weights):
             data[counter] *= value
 
-    data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
-    data *= 1.0/np.mean(weights)
+        data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).sum()
+        # data.to_excel("demand_wrong.xlsx") 
+    else:
+        data = pd.concat([data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9]]).groupby(level=0).mean()
+   
+    
+    train_data = data[data['Unix'] <=  1572739200]
     if not post:
-        data = data[data['Unix' <= 1585094400]] 
-
+        test_data = data[(data['Unix'] >= 1572739210) & (data['Unix'] <= 1585094400)] 
+    else:
+        test_data = data[data['Unix']>=  1572739210]
      #to reverse demand normalization
     
+    train_data = (train_data-data.min())/(data.max()-data.min())
+    test_data = (test_data-data.min())/(data.max()-data.min())
 
-    data = (data-data.min())/(data.max()-data.min())
-    new1_data = data.to_numpy() # convert from pandas dataframe to numpy
-    
+    new_train_data = train_data.to_numpy() # convert from pandas dataframe to numpy
+    new_test_data = test_data.to_numpy()
+
+
     data_points = 3
     demand = 1
-    observations = len(new1_data)
-        
-    formatted_data = np.zeros((observations, data_points + demand))
+    train_observations = len(new_train_data)
+    test_observations = len(new_test_data)
+
+    print(test_observations)
+
+    train_formatted_data = np.zeros((train_observations, data_points + demand))
+    test_formatted_data = np.zeros((test_observations, data_points + demand))
+
     
     # insert unix time and demand
     # formatted_data[:, 0] = new1_data[0][:,0] # unix
-    formatted_data[:, -1] = new1_data[:,-1] # demand
+    train_formatted_data[:, -1] = new_train_data[:,-1] # demand
+    test_formatted_data[:, -1] = new_test_data[:,-1] # demand
 
     #equals number of columns to add for just one city right now
     columns_to_add = [-8, -6, -5]
-    formatted_data[:, 0:data_points] = new1_data[:, columns_to_add] # inserts weather data to appropriate slot
+    train_formatted_data[:, 0:data_points] = new_train_data[:, columns_to_add] # inserts weather data to appropriate slot
+    test_formatted_data[:, 0:data_points] = new_test_data[:, columns_to_add] # inserts weather data to appropriate slot
+
 
     to_predict = 12
     day_timestamps = 96
@@ -399,42 +417,76 @@ def load_formatted_datav6(version=False, post=True, lookback=96, lookahead=12, w
     #only weather, and demand
     if version:
         #start at timestamp lookback
-        x = np.zeros((observations-lookback-lookahead, ((data_points + demand) * lookback )))
+        x_train = np.zeros((train_observations-lookback-lookahead, ((data_points + demand) * lookback )))
         #start at timestamp lookback
-        y = np.zeros((observations-lookback-lookahead, (data_points * lookahead))) 
-        z = np.zeros((observations-lookback-lookahead, to_predict))
+        y_train = np.zeros((train_observations-lookback-lookahead, (data_points * lookahead))) 
+        z_train = np.zeros((train_observations-lookback-lookahead, to_predict))
         timestamp = 0
-        for counter in range(lookback, observations - lookahead):
+        for counter in range(lookback, train_observations - lookahead):
             # print(((unix + data_points * number_cities + demand) *lookback))
             # print(len(formatted_data[0][:]))
-            x[timestamp][:] = formatted_data[counter-lookback:counter, :].reshape((data_points + demand) *lookback)
-            y[timestamp][:] = formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
-            z[timestamp][:] = formatted_data[counter: counter+to_predict, -1]
+            x_train[timestamp][:] = train_formatted_data[counter-lookback:counter, :].reshape((data_points + demand) *lookback)
+            y_train[timestamp][:] = train_formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z_train[timestamp][:] = train_formatted_data[counter: counter+to_predict, -1]
             timestamp += 1
 
-        x = np.reshape(x, (x.shape[0], -1, 4))
-        y = np.reshape(y, (y.shape[0], -1, 3))
+        x_train = np.reshape(x_train, (x_train.shape[0], -1, 4))
+        y_train = np.reshape(y_train, (y_train.shape[0], -1, 3))
+
+    
+        x_test = np.zeros((test_observations-lookback-lookahead, ((data_points + demand) * lookback )))
+        #start at timestamp lookback
+        y_test = np.zeros((test_observations-lookback-lookahead, (data_points * lookahead))) 
+        z_test = np.zeros((test_observations-lookback-lookahead, to_predict))
+        timestamp = 0
+        for counter in range(lookback, test_observations - lookahead):
+            # print(((unix + data_points * number_cities + demand) *lookback))
+            # print(len(formatted_data[0][:]))
+            x_test[timestamp][:] = test_formatted_data[counter-lookback:counter, :].reshape((data_points + demand) *lookback)
+            y_test[timestamp][:] = test_formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z_test[timestamp][:] = test_formatted_data[counter: counter+to_predict, -1]
+            timestamp += 1
+
+        x_test = np.reshape(x_test, (x_test.shape[0], -1, 4))
+        y_test = np.reshape(y_test, (y_test.shape[0], -1, 3))
 
 
     #demand
     else:
        #start at timestamp lookback
-        x = np.zeros((observations-lookback-lookahead, (demand) * lookback ))
+        x_train= np.zeros((train_observations-lookback-lookahead, (demand) * lookback ))
         #start at timestamp lookback
-        y = np.zeros((observations-lookback-lookahead, (data_points * lookahead))) 
-        z = np.zeros((observations-lookback-lookahead, to_predict))
+        y_train = np.zeros((train_observations-lookback-lookahead, (data_points * lookahead))) 
+        z_train = np.zeros((train_observations-lookback-lookahead, to_predict))
         timestamp = 0
-        for counter in range(lookback, observations - lookahead):
+        for counter in range(lookback, train_observations - lookahead):
             # print(((unix + data_points * number_cities + demand) *lookback))
             # print(len(formatted_data[0][:]))
-            x[timestamp][:] = formatted_data[counter-lookback:counter, -1].reshape(demand *lookback)
-            y[timestamp][:] = formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
-            z[timestamp][:] = formatted_data[counter: counter+to_predict , -1]
+            x_train[timestamp][:] = train_formatted_data[counter-lookback:counter, -1].reshape(demand *lookback)
+            y_train[timestamp][:] = train_formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z_train[timestamp][:] = train_formatted_data[counter: counter+to_predict , -1]
             timestamp += 1
         
-        y = np.reshape(y, (y.shape[0], -1, 3))
+        y_train = np.reshape(y_train, (y_train.shape[0], -1, 3))
 
-    return x, y, z, _max, _min   
+       #start at timestamp lookback
+        x_test= np.zeros((test_observations-lookback-lookahead, (demand) * lookback ))
+        #start at timestamp lookback
+        y_test = np.zeros((test_observations-lookback-lookahead, (data_points * lookahead))) 
+        z_train = np.zeros((test_observations-lookback-lookahead, to_predict))
+        timestamp = 0
+        for counter in range(lookback, test_observations - lookahead):
+            # print(((unix + data_points * number_cities + demand) *lookback))
+            # print(len(formatted_data[0][:]))
+            x_test[timestamp][:] = test_formatted_data[counter-lookback:counter, -1].reshape(demand *lookback)
+            y_test[timestamp][:] = test_formatted_data[counter: counter+lookahead, 0:-1].reshape((data_points * lookahead))
+            z_test[timestamp][:] = test_formatted_data[counter: counter+to_predict , -1]
+            timestamp += 1
+        
+        y_test = np.reshape(y_test, (y_test.shape[0], -1, 3))
+
+    return x_train, y_train, z_train, x_test, y_test, z_test, _max, _min
+    # return x, y, z, _max, _min   
 
 if __name__ == "__main__":
     # print(load_formatted_datav3("/Users/ngarg11/Energy-Forecasting/data/data.p")) 
