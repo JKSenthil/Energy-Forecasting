@@ -263,12 +263,11 @@ def example_pass(model, x, y, z):
 
 # ================ TRAIN finale ======================== #
 x, y, z, _max, _min = load_formatted_datav6(False)
-print(_max, _min)
 # model = cRNN(lag_size=96, latent_size=16, weather_size=3, gru_hiddensize=64)
 model = BasicMLP(96, 3 * 12, n_out=12)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 loss_function = nn.MSELoss().to(device)
-# train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=5)
+train_basicMLP(model, optimizer, loss_function, x, y, z, num_epochs=5)
 example_pass(model, x, y, z)
 # =================================================== $
 
